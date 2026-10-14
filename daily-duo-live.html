@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily Duo Live — shared two-person goal board</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='8' width='12' height='16' rx='3' fill='%230C8F93'/%3E%3Crect x='18' y='8' width='12' height='16' rx='3' fill='%23E4572E'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#0C8F93">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Daily Duo">
+<link rel="manifest" href='data:application/manifest+json,{"name":"Daily Duo Live","short_name":"Daily Duo","display":"standalone","start_url":"./","background_color":"%23F1F4F7","theme_color":"%230C8F93"}'>
+<style>
+  :root{
+    --paper:#F1F4F7;
+    --ink:#1C2833;
+    --line:#D8DFE6;
+    --muted:#66727E;
+    --a:#0C8F93;      /* you — track teal   */
+    --a-deep:#0B7B7E;
+    --a-soft:#DFF1F1;
+    --b:#E4572E;      /* buddy — flame      */
+    --b-deep:#C2431F;
+    --b-soft:#FCEAE3;
+    --card:#FFFFFF;
+    --ok:#1D9A4E;
+    --warn:#C98A00;
+    --off:#93A0AC;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  [hidden]{display:none !important}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    font-family:'Outfit',system-ui,sans-serif;
+    color:var(--ink);
+    background-color:var(--paper);
+    background-image:radial-gradient(#DBE1E8 1px,transparent 1.2px);
+    background-size:22px 22px;
+    min-height:100vh;
+    padding:40px 20px 60px;
+  }
+  .wrap{max-width:880px;margin:0 auto}
+
+  /* ---------- header ---------- */
+  .brand{
+    display:flex;align-items:center;gap:10px;
+    font-size:13px;font-weight:700;letter-spacing:.35em;text-transform:uppercase;
+  }
+  .brand .dot{width:12px;height:12px;border-radius:3px;display:inline-block}
+  .brand .dot--a{background:var(--a)}
+  .brand .dot--b{background:var(--b)}
+  .tag{color:var(--muted);font-size:15px;margin-top:8px}
+  .day{
+    font-family:'Anton',sans-serif;font-weight:400;
+    font-size:clamp(2.8rem,7vw,4.4rem);
+    line-height:1.05;text-transform:uppercase;letter-spacing:.01em;
+    margin-top:22px;
+  }
+  .datestr{color:var(--muted);font-size:15px;margin-top:6px}
+
+  /* ---------- room bar ---------- */
+  .roombar{
+    display:flex;flex-wrap:wrap;align-items:center;gap:10px;
+    margin-top:18px;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;padding:10px 14px;
+  }
+  .roombar .code{
+    font-weight:700;letter-spacing:.14em;font-size:14px;
+    background:var(--ink);color:#fff;border-radius:8px;padding:5px 12px;
+  }
+  .roombar .codelabel{font-size:12px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:600}
+  .status{display:inline-flex;align-items:center;gap:7px;font-size:13.5px;font-weight:600;margin-left:auto}
+  .status .lamp{width:9px;height:9px;border-radius:50%;background:var(--off)}
+  .status.live .lamp{background:var(--ok)}
+  .status.warn .lamp{background:var(--warn)}
+  .linkbtn{
+    border:1px solid var(--line);background:transparent;color:var(--ink);
+    font-family:'Outfit',sans-serif;font-weight:600;font-size:13px;border-radius:8px;
+    padding:6px 12px;cursor:pointer;
+  }
+  .linkbtn:hover{border-color:var(--muted)}
+
+  /* ---------- meet-in-the-middle meter ---------- */
+  .meter{margin-top:26px}
+  .meter-track{
+    position:relative;height:16px;background:var(--card);
+    border:1px solid var(--line);border-radius:999px;overflow:hidden;
+    box-shadow:inset 0 1px 3px rgba(28,40,51,.06);
+  }
+  .meter-fill{
+    position:absolute;top:0;bottom:0;width:0;
+    transition:width .45s cubic-bezier(.22,1,.36,1);
+  }
+  .meter-fill--a{left:0;background:linear-gradient(90deg,var(--a-deep),var(--a));border-radius:999px 0 0 999px}
+  .meter-fill--b{right:0;background:linear-gradient(270deg,var(--b-deep),var(--b));border-radius:0 999px 999px 0}
+  .meter-mid{
+    position:absolute;left:50%;top:50%;width:8px;height:8px;
+    transform:translate(-50%,-50%) rotate(45deg);
+    background:var(--paper);border:2px solid var(--ink);border-radius:2px;
+  }
+  .meter-counts{
+    display:flex;justify-content:space-between;align-items:baseline;
+    margin-top:10px;font-size:14px;font-weight:600;
+  }
+  .meter-counts .count{display:inline-flex;align-items:center;gap:7px}
+  .meter-counts .swatch{width:9px;height:9px;border-radius:3px;display:inline-block}
+  .meter-counts .mid{color:var(--muted);font-weight:500;font-size:12.5px;letter-spacing:.08em;text-transform:uppercase}
+
+  /* ---------- panels ---------- */
+  .cols{display:grid;grid-template-columns:1fr;gap:18px;margin-top:30px}
+  @media (min-width:760px){.cols{grid-template-columns:1fr 1fr}}
+
+  .panel{
+    position:relative;overflow:hidden;
+    background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:20px 18px 18px;
+    box-shadow:0 1px 2px rgba(28,40,51,.04);
+  }
+  .panel::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:var(--accent)}
+  .panel--a{--accent:var(--a);--accent-deep:var(--a-deep);--accent-soft:var(--a-soft)}
+  .panel--b{--accent:var(--b);--accent-deep:var(--b-deep);--accent-soft:var(--b-soft)}
+  .panel--remote .name-input{cursor:default}
+
+  .panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+  .name-input{
+    font-family:'Outfit',sans-serif;font-weight:700;font-size:19px;color:var(--ink);
+    border:1px solid transparent;border-radius:8px;background:transparent;
+    padding:2px 6px;margin-left:-6px;min-width:0;flex:1;
+  }
+  .name-input:hover{border-color:var(--line)}
+  .name-input:focus{outline:none;border-color:var(--accent);background:#fff}
+  .pct{
+    font-family:'Anton',sans-serif;font-size:clamp(1.9rem,4vw,2.5rem);
+    line-height:1;color:var(--accent);white-space:nowrap;
+  }
+  .streak{
+    display:inline-block;margin-top:10px;
+    background:var(--accent-soft);color:var(--accent-deep);
+    font-size:12px;font-weight:600;letter-spacing:.02em;
+    padding:4px 10px;border-radius:999px;
+  }
+
+  ul.goals{list-style:none;margin-top:14px;border-top:1px solid var(--line)}
+  .goal{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);padding:11px 2px}
+  .g-main{display:flex;align-items:center;gap:11px;flex:1;min-width:0;cursor:pointer}
+  .g-main input[type=checkbox]{
+    position:absolute;opacity:0;width:22px;height:22px;cursor:pointer;
+  }
+  .tick{
+    flex:0 0 auto;width:22px;height:22px;border:2px solid var(--accent);
+    border-radius:7px;position:relative;transition:background .15s ease,border-color .15s ease;
+  }
+  .g-main input:checked + .tick{background:var(--accent);border-color:var(--accent)}
+  .g-main input:checked + .tick::after{
+    content:"";position:absolute;left:7px;top:2.5px;width:5px;height:10px;
+    border-right:2.5px solid #fff;border-bottom:2.5px solid #fff;
+    transform:rotate(45deg);
+  }
+  .g-main input:focus-visible + .tick{outline:2px solid var(--accent-deep);outline-offset:2px}
+  .g-txt{font-size:15.5px;font-weight:500;overflow-wrap:anywhere}
+  .goal.done .g-txt{color:#93A0AC;text-decoration:line-through;text-decoration-thickness:2px}
+
+  .g-edit{
+    flex:1;min-width:0;font-family:'Outfit',sans-serif;font-size:15.5px;font-weight:500;color:var(--ink);
+    border:1px solid var(--accent);border-radius:8px;padding:4px 8px;background:#fff;
+  }
+  .g-edit:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+
+  .g-actions{display:flex;gap:2px;opacity:0;transition:opacity .15s ease}
+  .goal:hover .g-actions,.goal:focus-within .g-actions{opacity:1}
+  .icon-btn{
+    border:none;background:transparent;color:var(--muted);cursor:pointer;
+    width:26px;height:26px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;
+  }
+  .icon-btn:hover{background:var(--accent-soft);color:var(--accent-deep)}
+  .icon-btn:disabled{opacity:.3;cursor:default}
+  .icon-btn:disabled:hover{background:transparent;color:var(--muted)}
+  .icon-btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+  .empty{
+    padding:16px 2px;border-bottom:1px solid var(--line);
+    color:var(--muted);font-size:14px;
+  }
+
+  .add{display:flex;gap:8px;margin-top:14px}
+  .add input{
+    flex:1;min-width:0;font-family:'Outfit',sans-serif;font-size:15px;color:var(--ink);
+    border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;
+  }
+  .add input::placeholder{color:#9AA6B1}
+  .add input:focus{outline:none;border-color:var(--accent)}
+  .add button{
+    font-family:'Outfit',sans-serif;font-weight:700;font-size:14.5px;color:#fff;
+    background:var(--accent-deep);border:none;border-radius:10px;padding:0 18px;cursor:pointer;
+  }
+  .add button:hover{filter:brightness(1.08)}
+  .add button:focus-visible,.icon-btn:focus-visible,.ghost:focus-visible,.primary:focus-visible{outline:2px solid var(--accent-deep);outline-offset:2px}
+
+  /* ---------- gate / claim screens ---------- */
+  .gate{
+    max-width:520px;margin:60px auto 0;background:var(--card);
+    border:1px solid var(--line);border-radius:16px;padding:34px 30px;
+    box-shadow:0 2px 6px rgba(28,40,51,.05);
+  }
+  .gate h2{font-family:'Anton',sans-serif;font-weight:400;font-size:30px;text-transform:uppercase;letter-spacing:.01em}
+  .gate p{color:var(--muted);font-size:15px;margin-top:8px;line-height:1.55}
+  .gate .row{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+  .gate .row.vertical{flex-direction:column}
+  .field{
+    flex:1;min-width:0;font-family:'Outfit',sans-serif;font-size:15px;color:var(--ink);
+    border:1px solid var(--line);border-radius:10px;padding:11px 14px;background:#fff;
+  }
+  .field:focus{outline:none;border-color:var(--a)}
+  .primary{
+    font-family:'Outfit',sans-serif;font-weight:700;font-size:14.5px;color:#fff;
+    background:var(--a-deep);border:none;border-radius:10px;padding:11px 20px;cursor:pointer;
+  }
+  .primary:hover{filter:brightness(1.08)}
+  .slotbtn{
+    text-align:left;font-family:'Outfit',sans-serif;font-size:15px;font-weight:600;color:var(--ink);
+    background:#fff;border:1px solid var(--line);border-radius:10px;padding:13px 16px;cursor:pointer;
+    display:flex;align-items:center;gap:10px;
+  }
+  .slotbtn:hover{border-color:var(--a)}
+  .slotbtn .sw{width:12px;height:12px;border-radius:3px;flex:0 0 auto}
+  .gate .hint{font-size:13px;color:var(--muted);margin-top:14px}
+
+  /* ---------- footer ---------- */
+  .foot{
+    display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+    margin-top:30px;
+  }
+  .ghost{
+    font-family:'Outfit',sans-serif;font-weight:600;font-size:14px;color:var(--ink);
+    background:var(--card);border:1px solid var(--line);border-radius:10px;
+    padding:10px 16px;cursor:pointer;
+  }
+  .ghost:hover{border-color:var(--muted)}
+  .note{color:var(--muted);font-size:13px;margin-top:14px;max-width:560px;line-height:1.5}
+
+  /* ---------- toast ---------- */
+  .toast{
+    position:fixed;left:50%;bottom:26px;transform:translate(-50%,14px);
+    background:var(--ink);color:#fff;font-size:14px;font-weight:500;
+    padding:11px 20px;border-radius:999px;opacity:0;pointer-events:none;
+    transition:opacity .25s ease,transform .25s ease;max-width:90vw;text-align:center;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+
+  /* ---------- confetti ---------- */
+  .confetti{
+    position:absolute;top:6px;width:8px;height:12px;border-radius:2px;
+    pointer-events:none;z-index:5;
+    animation:fall 1s ease-in forwards;
+  }
+  @keyframes fall{
+    to{transform:translate(var(--dx),110px) rotate(var(--rot));opacity:0}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none !important;animation:none !important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ======= start screens ======= -->
+  <section class="gate" id="gate">
+    <h2>Daily Duo Live</h2>
+    <p>One shared board for two people. Create a room, then send the room code to your friend — every tick you make appears on their screen within seconds, and theirs on yours.</p>
+    <div class="row">
+      <button class="primary" id="createBtn">Create a room</button>
+      <button class="ghost" id="joinBtn">Join with a code</button>
+    </div>
+    <form class="row" id="joinForm" hidden>
+      <input class="field" id="joinCode" placeholder="Room code (e.g. K4P2X)" maxlength="8" autocomplete="off">
+      <button class="primary" type="submit">Join</button>
+    </form>
+  </section>
+
+  <section class="gate" id="claim" hidden>
+    <h2>Who’s on this device?</h2>
+    <p id="claimIntro">Claim your column — ticks made here publish as you.</p>
+    <div class="row vertical" id="claimOpts"></div>
+    <p class="hint">You can change the column’s name any time after joining.</p>
+  </section>
+
+  <!-- ======= board ======= -->
+  <div id="board" hidden>
+    <header>
+      <div class="brand"><span class="dot dot--a"></span><span class="dot dot--b"></span>Daily Duo <span style="letter-spacing:.1em;opacity:.55">· live</span></div>
+      <p class="tag">Two names, one board — tick your goals, keep each other honest.</p>
+      <h1 class="day" id="weekday">Tuesday</h1>
+      <p class="datestr" id="datestr">13 October 2026 · a fresh board every day</p>
+    </header>
+
+    <div class="roombar">
+      <span class="codelabel">Room</span>
+      <span class="code" id="roomCode">·····</span>
+      <button class="linkbtn" id="inviteBtn">Copy invite message</button>
+      <span class="status" id="status"><span class="lamp"></span><span id="statusTxt">Connecting…</span></span>
+    </div>
+
+    <section class="meter" aria-label="Combined progress">
+      <div class="meter-track">
+        <div class="meter-fill meter-fill--a" id="fillA"></div>
+        <div class="meter-fill meter-fill--b" id="fillB"></div>
+        <div class="meter-mid" aria-hidden="true"></div>
+      </div>
+      <div class="meter-counts">
+        <span class="count"><span class="swatch" style="background:var(--a)"></span><span id="countA">0/0</span></span>
+        <span class="mid">meet in the middle</span>
+        <span class="count"><span id="countB">0/0</span><span class="swatch" style="background:var(--b)"></span></span>
+      </div>
+    </section>
+
+    <main class="cols">
+      <section class="panel panel--a" id="panelA" aria-label="Column one">
+        <div class="panel-head">
+          <input class="name-input" id="nameA" title="Click to rename" maxlength="24" aria-label="Column one name">
+          <div class="pct" id="pctA">0%</div>
+        </div>
+        <div class="streak" id="streakA">No streak yet</div>
+        <ul class="goals" id="listA"></ul>
+        <form class="add" id="formA">
+          <input type="text" id="inputA" placeholder="Add a goal for today…" maxlength="80" aria-label="Add goal">
+          <button type="submit">Add</button>
+        </form>
+      </section>
+
+      <section class="panel panel--b" id="panelB" aria-label="Column two">
+        <div class="panel-head">
+          <input class="name-input" id="nameB" title="Click to rename" maxlength="24" aria-label="Column two name">
+          <div class="pct" id="pctB">0%</div>
+        </div>
+        <div class="streak" id="streakB">No streak yet</div>
+        <ul class="goals" id="listB"></ul>
+        <form class="add" id="formB" hidden>
+          <input type="text" id="inputB" placeholder="Add a goal for today…" maxlength="80" aria-label="Add goal">
+          <button type="submit">Add</button>
+        </form>
+      </section>
+    </main>
+
+    <div class="foot">
+      <button class="ghost" id="shareBtn">Share score</button>
+      <button class="ghost" id="freshBtn">Start fresh day</button>
+      <button class="ghost" id="leaveBtn">Leave room</button>
+    </div>
+    <p class="note">Your column is editable; your friend’s shows their live progress (only they can tick it). Changes publish instantly and a heartbeat keeps both screens current. If the connection drops, your ticks stay saved on this device and catch up when it returns. Tip: always open the board the same way — the home-screen icon or the bookmark — because on iPhone each way keeps its own saved session.</p>
+  </div>
+
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  'use strict';
+  var NTFY='https://ntfy.sh';
+  var $=function(id){return document.getElementById(id);};
+  var reduceMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- tiny helpers ---------- */
+  function todayKey(){
+    var d=new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  function makeCode(){
+    var abc='ABCDEFGHJKMNPQRSTUVWXYZ23456789',s='';
+    for(var i=0;i<5;i++) s+=abc[Math.floor(Math.random()*abc.length)];
+    return s;
+  }
+  function counts(d){ /* d = slot data {goals:[...]} */
+    if(!d||!Array.isArray(d.goals)) return {done:0,total:0,pct:0};
+    var total=d.goals.length;
+    var done=d.goals.filter(function(x){return x&&x.done;}).length;
+    return {done:done,total:total,pct: total? Math.round(done/total*100):0};
+  }
+  function validSlot(d){
+    return d && typeof d.name==='string' && typeof d.streak==='number' &&
+           Array.isArray(d.goals) && d.goals.every(function(g){return g && typeof g.t==='string' && typeof g.done==='boolean';});
+  }
+  function emptySlot(){ return {name:'',streak:0,date:todayKey(),goals:[]}; }
+
+  var toastTimer=null;
+  function toast(msg){
+    var el=$('toast');
+    el.textContent=msg; el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer=setTimeout(function(){el.classList.remove('show');},2400);
+  }
+  function copyText(t,okMsg){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).then(function(){toast(okMsg);},function(){toast('Copy failed — your browser blocked it');});
+    }else toast('Copy not supported here');
+  }
+  function burst(panel,colors){
+    if(reduceMotion) return;
+    for(var i=0;i<16;i++){
+      var s=document.createElement('span');
+      s.className='confetti';
+      s.style.left=(10+Math.random()*80)+'%';
+      s.style.background=colors[i%colors.length];
+      s.style.setProperty('--dx',(Math.random()*90-45).toFixed(0)+'px');
+      s.style.setProperty('--rot',(120+Math.random()*420).toFixed(0)+'deg');
+      panel.appendChild(s);
+      (function(el){setTimeout(function(){el.remove();},1100);})(s);
+    }
+  }
+
+  /* ---------- session state ---------- */
+  var room=null;        /* room code */
+  var mySlot=null;      /* 0 or 1 */
+  var mine=emptySlot(); /* my authoritative slot data */
+  var other=null;       /* latest received slot data or null */
+  var es=null;          /* EventSource */
+  var lastPub=0,lastPubOk=true,lastRecv=0,celebrated=false;
+  var pubTimer=null;
+
+  function lsKey(){ return 'dd-live-'+room; }
+  function saveLocal(){
+    try{ localStorage.setItem(lsKey(),JSON.stringify({slot:mySlot,mine:mine})); }catch(e){}
+  }
+  function loadLocal(){
+    try{
+      var s=JSON.parse(localStorage.getItem(lsKey()));
+      if(s && (s.slot===0||s.slot===1) && validSlot(s.mine)){ mySlot=s.slot; mine=s.mine; return true; }
+    }catch(e){}
+    return false;
+  }
+  function forgetLocal(){ try{ localStorage.removeItem(lsKey()); }catch(e){} }
+
+  /* ---------- publish / subscribe ---------- */
+  function topic(){ return 'ddlive-'+room; }
+  function publish(retry){
+    if(!room||mySlot===null) return;
+    var msg={type:'state',slot:mySlot,name:mine.name,streak:mine.streak,date:mine.date,goals:mine.goals,ts:Date.now()};
+    lastPub=Date.now();
+    fetch(NTFY+'/'+topic(),{method:'POST',body:JSON.stringify(msg)})
+      .then(function(res){
+        lastPubOk=!!res.ok; setStatus();
+        if(!res.ok && !retry) setTimeout(function(){publish(true);},5000);
+      })
+      .catch(function(){
+        lastPubOk=false; setStatus();
+        if(!retry) setTimeout(function(){publish(true);},5000);
+      });
+  }
+  function schedulePublish(){
+    clearTimeout(pubTimer);
+    pubTimer=setTimeout(publish,400);
+  }
+  function requestSync(){ /* nudge the other device to announce itself */
+    if(!room) return;
+    fetch(NTFY+'/'+topic(),{method:'POST',body:JSON.stringify({type:'hello',ts:Date.now()})}).catch(function(){});
+  }
+  function listen(){
+    if(es) es.close();
+    var url=NTFY+'/'+topic()+'/sse?since='+encodeURIComponent('1h');
+    es=new EventSource(url);
+    es.onopen=function(){ lastPubOk=true; setStatus(); requestSync(); };
+    es.onerror=function(){
+      setStatus();
+      if(es && es.readyState===2){ setTimeout(listen,3000); } /* EventSource gave up — take over */
+    };
+    es.onmessage=function(ev){
+      try{
+        var env=JSON.parse(ev.data);
+        if(!env || env.event!=='message' || !env.message) return;
+        var m=JSON.parse(env.message);
+        if(m.type==='hello'){ publish(); return; }
+        if(m.type!=='state' || !validSlot(m)) return;
+        if(mySlot===null || m.slot===mySlot || m.slot<0 || m.slot>1) return;
+        if(other && m.ts<=other.ts) return;         /* stale */
+        var isToday = m.date===todayKey();
+        other={name:m.name,streak:m.streak,date:m.date,ts:m.ts,
+               goals:m.goals.map(function(g){ return {t:g.t,done: isToday?g.done:false}; })};
+        lastRecv=Date.now();
+        maybeCelebrateTogether();
+        render();
+      }catch(e){}
+    };
+  }
+
+  /* ---------- rollover (my slot only) ---------- */
+  function rollover(){
+    var t=todayKey();
+    if(mine.date===t) return;
+    var total=mine.goals.length;
+    var all=total>0 && mine.goals.every(function(x){return x.done;});
+    mine.streak = all ? mine.streak+1 : 0;
+    mine.goals.forEach(function(x){x.done=false;});
+    mine.date=t;
+    saveLocal(); publish();
+  }
+
+  /* ---------- celebration ---------- */
+  function maybeCelebrate(pi,panelEl,slotData){
+    var c=counts(slotData);
+    if(c.total>0 && c.done===c.total){
+      burst(panelEl, pi===0?['#0C8F93','#0B7B7E','#1C2833']:['#E4572E','#C2431F','#1C2833']);
+      toast(slotData.name+' closed the list — '+c.total+'/'+c.total);
+      var oc=counts(mySlot===0?other:mine);
+      if(oc.total>0 && oc.done===oc.total && !celebrated){
+        celebrated=true;
+        setTimeout(function(){
+          burst($('panelA'),['#0C8F93','#E4572E','#1C2833']);
+          burst($('panelB'),['#0C8F93','#E4572E','#1C2833']);
+          toast('Both lists closed. Good day.');
+        },700);
+      }
+    }
+  }
+
+  /* ---------- status ---------- */
+  function setStatus(){
+    var el=$('status'),txt=$('statusTxt');
+    if(!room){ el.className='status'; txt.textContent='—'; return; }
+    var st = es ? es.readyState : 2; /* 0 connecting, 1 open, 2 closed */
+    if(st===1 && lastPubOk){
+      el.className='status live';
+      txt.textContent = lastRecv ? 'Live' : 'Live · waiting for your buddy';
+    }else if(st===0){
+      el.className='status warn'; txt.textContent='Connecting…';
+    }else{
+      el.className='status warn'; txt.textContent='Offline — saved here · will catch up';
+    }
+  }
+  setInterval(setStatus,5000);
+
+  /* ---------- rendering ---------- */
+  var ICONS={
+    edit:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19.5 8.5a2.12 2.12 0 0 0-3-3L5 17v3z"/><path d="M13.5 6.5l3 3"/></svg>',
+    up:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg>',
+    down:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14m6-6-6 6-6-6"/></svg>',
+    del:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-9 0 1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/></svg>'
+  };
+
+  function goalRow(pi,idx){
+    var editable = (mySlot===pi);
+    var d = editable ? mine : other;
+    var gx=d.goals[idx];
+    var li=document.createElement('li');
+    li.className='goal'+(gx.done?' done':'');
+
+    var label=document.createElement('label');
+    label.className='g-main';
+    var cb=document.createElement('input');
+    cb.type='checkbox'; cb.checked=gx.done; cb.disabled=!editable;
+    if(editable) cb.addEventListener('change',function(){
+      gx.done=cb.checked; saveLocal(); schedulePublish(); render();
+      if(gx.done) maybeCelebrate(pi, pi===0?$('panelA'):$('panelB'), mine);
+    });
+    var tick=document.createElement('span');
+    tick.className='tick'; tick.setAttribute('aria-hidden','true');
+    var txt=document.createElement('span');
+    txt.className='g-txt'; txt.textContent=gx.t;
+    label.appendChild(cb); label.appendChild(tick); label.appendChild(txt);
+    li.appendChild(label);
+
+    if(!editable) return li;
+
+    function startEdit(){
+      var doneEditing=false;
+      var input=document.createElement('input');
+      input.className='g-edit'; input.type='text'; input.value=gx.t; input.maxLength=80;
+      input.setAttribute('aria-label','Edit goal');
+      label.replaceChild(input,txt);
+      input.focus(); input.select();
+      function commit(){
+        if(doneEditing) return; doneEditing=true;
+        var v=input.value.trim();
+        gx.t = v || gx.t;
+        saveLocal(); schedulePublish(); render();
+      }
+      input.addEventListener('keydown',function(e){
+        if(e.key==='Enter'){e.preventDefault();commit();}
+        else if(e.key==='Escape'){doneEditing=true;render();}
+      });
+      input.addEventListener('blur',commit);
+    }
+    txt.addEventListener('dblclick',startEdit);
+
+    var actions=document.createElement('div');
+    actions.className='g-actions';
+
+    var edit=document.createElement('button');
+    edit.type='button'; edit.className='icon-btn'; edit.innerHTML=ICONS.edit;
+    edit.title='Edit goal'; edit.setAttribute('aria-label','Edit goal');
+    edit.addEventListener('click',startEdit);
+
+    var up=document.createElement('button');
+    up.type='button'; up.className='icon-btn'; up.innerHTML=ICONS.up;
+    up.title='Move up'; up.setAttribute('aria-label','Move up');
+    up.disabled=(idx===0);
+    up.addEventListener('click',function(){
+      mine.goals.splice(idx-1,0,mine.goals.splice(idx,1)[0]);
+      saveLocal(); schedulePublish(); render();
+    });
+
+    var down=document.createElement('button');
+    down.type='button'; down.className='icon-btn'; down.innerHTML=ICONS.down;
+    down.title='Move down'; down.setAttribute('aria-label','Move down');
+    down.disabled=(idx===mine.goals.length-1);
+    down.addEventListener('click',function(){
+      mine.goals.splice(idx+1,0,mine.goals.splice(idx,1)[0]);
+      saveLocal(); schedulePublish(); render();
+    });
+
+    var del=document.createElement('button');
+    del.type='button'; del.className='icon-btn'; del.innerHTML=ICONS.del;
+    del.title='Delete goal'; del.setAttribute('aria-label','Delete goal');
+    del.addEventListener('click',function(){
+      mine.goals.splice(idx,1); saveLocal(); schedulePublish(); render();
+    });
+
+    actions.appendChild(edit); actions.appendChild(up); actions.appendChild(down); actions.appendChild(del);
+    li.appendChild(actions);
+    return li;
+  }
+
+  function renderList(pi){
+    var editable=(mySlot===pi);
+    var d = editable ? mine : other;
+    var ul= pi===0 ? $('listA') : $('listB');
+    ul.textContent='';
+    if(!d || !d.goals.length){
+      var li=document.createElement('li');
+      li.className='empty';
+      li.textContent = editable
+        ? 'No goals yet — type your first one below.'
+        : (other ? 'Waiting for goals…' : 'Waiting to hear from your buddy…');
+      ul.appendChild(li);
+      return;
+    }
+    d.goals.forEach(function(_,i){ ul.appendChild(goalRow(pi,i)); });
+  }
+
+  function render(){
+    $('weekday').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long'});
+    $('datestr').textContent=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})+' · a fresh board every day';
+    $('roomCode').textContent=room;
+
+    var dA = mySlot===0 ? mine : other;
+    var dB = mySlot===1 ? mine : other;
+    var cA=counts(dA), cB=counts(dB);
+
+    $('fillA').style.width=(cA.pct/2)+'%';
+    $('fillB').style.width=(cB.pct/2)+'%';
+    $('countA').textContent=(dA&&dA.name?dA.name:'…')+' · '+cA.done+'/'+cA.total;
+    $('countB').textContent=cB.done+'/'+cB.total+' · '+(dB&&dB.name?dB.name:'…');
+
+    var minePct=counts(mine).pct;
+    $('pct'+(mySlot===0?'A':'B')).textContent=minePct+'%';
+    var otherPct=counts(other).pct;
+    $('pct'+(mySlot===0?'B':'A')).textContent=(other?otherPct+'%':'—');
+
+    [0,1].forEach(function(i){
+      var d= i===0?dA:dB;
+      var el= i===0 ? $('streakA') : $('streakB');
+      if(!d){ el.textContent='Waiting…'; return; }
+      var c=counts(d);
+      if(c.total>0 && c.done===c.total) el.textContent='List closed today';
+      else if(d.streak>0) el.textContent='Streak · '+d.streak+(d.streak===1?' day':' days');
+      else el.textContent='No streak yet';
+    });
+
+    $('nameA').value = dA&&dA.name ? dA.name : '';
+    $('nameB').value = dB&&dB.name ? dB.name : '';
+    $('nameA').readOnly = (mySlot!==0);
+    $('nameB').readOnly = (mySlot!==1);
+
+    $('formA').hidden = (mySlot!==0);
+    $('formB').hidden = (mySlot!==1);
+    $('panelA').classList.toggle('panel--remote', mySlot!==0);
+    $('panelB').classList.toggle('panel--remote', mySlot!==1);
+
+    renderList(0); renderList(1);
+  }
+
+  /* ---------- panel editing (own slot only) ---------- */
+  function bindPanel(){
+    var pi=mySlot;
+    var form= pi===0 ? $('formA') : $('formB');
+    var input= pi===0 ? $('inputA') : $('inputB');
+    var nameEl= pi===0 ? $('nameA') : $('nameB');
+
+    form.addEventListener('submit',function(e){
+      e.preventDefault();
+      var v=input.value.trim(); if(!v) return;
+      mine.goals.push({t:v,done:false});
+      saveLocal(); schedulePublish(); render();
+      input.value=''; input.focus();
+    });
+    nameEl.addEventListener('input',function(){
+      var v=nameEl.value.trim();
+      mine.name=v || 'You';
+      saveLocal(); schedulePublish();
+      var cA=counts(mySlot===0?mine:other), cB=counts(mySlot===1?mine:other);
+      $('countA').textContent=(mySlot===0?mine.name:(other&&other.name?other.name:'…'))+' · '+cA.done+'/'+cA.total;
+      $('countB').textContent=cB.done+'/'+cB.total+' · '+(mySlot===1?mine.name:(other&&other.name?other.name:'…'));
+    });
+    nameEl.addEventListener('change',function(){ schedulePublish(); });
+  }
+
+  /* ---------- footer actions ---------- */
+  function bindFoot(){
+    $('shareBtn').addEventListener('click',function(){
+      var cA=counts(dA()||{goals:[]}), cB=counts(dB()||{goals:[]});
+      var d=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+      var nA=(dA()&&dA().name)||'Column 1', nB=(dB()&&dB().name)||'Column 2';
+      copyText('Daily Duo · '+d+'\n'+nA+': '+cA.done+'/'+cA.total+' ('+cA.pct+'%)\n'+nB+': '+cB.done+'/'+cB.total+' ('+cB.pct+'%)','Score copied — paste it anywhere');
+    });
+    function dA(){ return mySlot===0?mine:other; }
+    function dB(){ return mySlot===1?mine:other; }
+
+    $('freshBtn').addEventListener('click',function(){
+      if(!confirm('Untick every box in YOUR list and start today fresh? Your streak stays as it is.')) return;
+      mine.goals.forEach(function(x){x.done=false;});
+      celebrated=false;
+      saveLocal(); publish(); render();
+      toast('Fresh board — good luck out there');
+    });
+
+    $('inviteBtn').addEventListener('click',function(){
+      var msg='Join our Daily Duo board — open the Daily Duo Live file, choose “Join with a code”, and enter: '+room;
+      if(location.protocol.startsWith('http')) msg='Join our Daily Duo board: '+location.href+'\n(code: '+room+')';
+      copyText(msg,'Invite copied — send it to your buddy');
+    });
+
+    $('leaveBtn').addEventListener('click',function(){
+      if(!confirm('Leave this room on this device? Your goals stay in the room from your other devices; this device forgets its slot.')) return;
+      if(es) es.close();
+      forgetLocal();
+      try{ localStorage.removeItem('dd-last-room'); }catch(e){}
+      location.hash='';
+      location.reload();
+    });
+  }
+
+  /* ---------- flows ---------- */
+  function showGate(){ $('gate').hidden=false; $('claim').hidden=true; $('board').hidden=true; }
+  function showClaim(intro){
+    $('gate').hidden=true; $('board').hidden=true;
+    $('claim').hidden=false;
+    $('claimIntro').textContent=intro||'Claim your column — ticks made here publish as you.';
+    var opts=$('claimOpts'); opts.textContent='';
+    [[0,'a'],[1,'b']].forEach(function(pair){
+      var i=pair[0], cls=pair[1];
+      var d = i===0 ? (mySlot===0?mine:other) : (mySlot===1?mine:other);
+      var btn=document.createElement('button');
+      btn.type='button'; btn.className='slotbtn';
+      var sw=document.createElement('span');
+      sw.className='sw'; sw.style.background='var(--'+cls+')';
+      var label=document.createElement('span');
+      if(mySlot===i){
+        label.textContent='This is you — '+(mine.name||'unnamed');
+      }else if(d&&d.name){
+        label.textContent='Join as the other column ('+(d.name||'unnamed')+' is taken)';
+      }else{
+        label.textContent='Claim this column'+(d&&d.name?' ('+d.name+')':' — name it');
+      }
+      btn.appendChild(sw); btn.appendChild(label);
+      btn.addEventListener('click',function(){ claim(i); });
+      opts.appendChild(btn);
+    });
+  }
+  function claim(i){
+    mySlot=i;
+    if(!mine.name) mine.name = (i===0 ? 'You' : 'Buddy');
+    saveLocal();
+    enterBoard(true);
+  }
+  function enterBoard(freshJoin){
+    try{ localStorage.setItem('dd-last-room',JSON.stringify({room:room})); }catch(e){}
+    history.replaceState(null,'','#room='+room);
+    $('gate').hidden=true; $('claim').hidden=true; $('board').hidden=false;
+    rollover();
+    render();
+    bindPanel(); bindFoot();
+    listen(); requestSync(); publish();
+    setInterval(rollover,30000);
+    setInterval(function(){ if(document.visibilityState==='visible') requestSync(); },180000);
+    document.addEventListener('visibilitychange',function(){
+      if(document.visibilityState==='visible') requestSync();
+    });
+    setTimeout(function(){
+      if(!other && !$('board').hidden){
+        toast('No sign of your buddy yet — they appear the moment they open room '+room);
+      }
+    },10000);
+  }
+
+  $('createBtn').addEventListener('click',function(){
+    room=makeCode();
+    history.replaceState(null,'','#room='+room);
+    showClaim('Room created — code '+room+'. Claim your column, then send the code to your friend.');
+  });
+  $('joinBtn').addEventListener('click',function(){
+    $('joinForm').hidden=false; $('joinCode').focus();
+  });
+  $('joinForm').addEventListener('submit',function(e){
+    e.preventDefault();
+    var v=$('joinCode').value.trim().toUpperCase();
+    if(!v){ toast('Type the room code your friend gave you'); return; }
+    room=v;
+    history.replaceState(null,'','#room='+room);
+    showClaim('Joining room '+room+' — claim your column.');
+  });
+
+  /* ---------- boot ---------- */
+  var savedRoom=null;
+  try{ savedRoom=JSON.parse(localStorage.getItem('dd-last-room')); }catch(e){}
+  if(savedRoom && savedRoom.room && /^[A-Za-z0-9]{4,8}$/.test(savedRoom.room)) room=savedRoom.room;
+  var hash=(location.hash.match(/room=([A-Za-z0-9]+)/)||[])[1];
+  if(hash) room=hash.toUpperCase();
+  if(room){
+    if(loadLocal()){
+      enterBoard(true);   /* welcome back — saved session restored */
+      toast('Welcome back — your board was restored');
+    }else{
+      showClaim('Joining room '+room+' — claim your column.');
+    }
+  }else{
+    showGate();
+  }
+})();
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>
